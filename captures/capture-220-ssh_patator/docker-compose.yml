@@ -1,0 +1,49 @@
+version: '2'
+
+services:
+  sshd:
+    image: 'detlearsom/sshd'
+    container_name: sshd_bf
+    ports:
+      - '2022:22'
+    volumes:
+      - '$PWD/sshd_share:/usr/share/scripts'
+    networks:
+      capture:
+        ipv4_address: '172.16.240.22'
+
+  patator:
+    image: 'detlearsom/patator'
+    container_name: patator_ssh
+    volumes: 
+      - '$PWD/patator-share:/usr/share/scripts'
+    networks:
+      - capture  
+
+  tcpdump_sshd:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-220-sshd_bf-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:sshd"
+
+
+  tcpdump_patator:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-220-sshd-patator-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:patator"
+
+
+
+networks:
+  capture:
+    driver: 'bridge'
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.240.0/24
+        gateway: 172.16.240.1
+
+  
