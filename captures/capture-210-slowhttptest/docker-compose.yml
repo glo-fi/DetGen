@@ -1,0 +1,61 @@
+version: '2'
+services:
+  apache:
+    image: 'httpd'
+    volumes:
+      - '$PWD/config/ssl/:/usr/local/apache2/conf'
+      - '$PWD/config:/usr/local/apache2/htdocs'    
+      - '$PWD/config/extra/httpd-ssl.conf:/usr/local/apache2/conf/extra/httpd-ssl.conf'
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      capture:
+        ipv4_address: 172.16.238.15
+
+
+  slowhttptest:
+    image: 'detlearsom/slowhttptest'
+    container_name: slowhttptest
+    command: tail -f /dev/null
+    volumes:
+       - '$PWD/slow-share:/usr/share/scripts'
+    networks:
+      - capture
+
+  tcpdump_apache:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-210-apacheSSL-server-slowhttptest-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:apache"
+    depends_on:
+      - dummy
+    
+  tcpdump_slowhttptest:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-210-slowhttptest-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:slowhttptest"
+    depends_on:
+      - dummy
+
+
+  dummy:
+    image: 'ubuntu'
+    networks:
+      - capture
+    depends_on:
+      - apache
+      - slowhttptest
+
+
+networks:
+  capture:
+    driver: "bridge"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.238.0/24
+        gateway: 172.16.238.1
