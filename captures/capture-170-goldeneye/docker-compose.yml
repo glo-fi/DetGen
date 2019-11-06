@@ -1,0 +1,79 @@
+version: '2'
+
+services:
+  nginx:
+    image: nginx:1.13.8-alpine
+    volumes:
+      - $PWD/conf/default.conf:/etc/nginx.conf:ro
+      - $PWD/conf:/usr/share/nginx/html
+    networks:
+      capture:
+        ipv4_address: 172.16.230.5
+
+#  wget:
+#    image: 'detlearsom/wget'
+#    command: wget --limit-rate=100k --recursive --page-requisites --html-extension --convert-links "http://nginx" -P /data
+#    volumes:
+#      - "$PWD/data:/data"
+#    networks:
+#      - capture
+
+  tcpdump_nginx:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-170-nginx-server-dos-${CAPTURETIME}-$REPNUM.pcap"
+    depends_on:
+      - nginx
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:nginx"
+    depends_on:
+      - dummy
+
+
+#  tcpdump_wget:
+#    image: 'detlearsom/tcpdump'
+#    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-170-wget-dos-${CAPTURETIME}-$REPNUM.pcap"
+#    volumes:
+#      - '${DATADIR}:/data'
+#    network_mode: "service:wget"
+#    depends_on:
+#      - dummy
+
+  tcpdump_goldeneye:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-170-goldeneye-dos-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:goldeneye"
+    depends_on:
+      - dummy
+
+
+  goldeneye:
+    image: 'detlearsom/goldeneye'
+    volumes:
+      - '$PWD/goldeneye-share:/usr/share/scripts'
+    command: /usr/share/scripts/start_goldeneye.sh
+#    command: sleep 1000
+    networks:
+      - capture
+    depends_on:
+      - nginx
+
+
+  dummy:
+    image: 'alpine'
+    networks:
+      - capture
+    depends_on:
+      - nginx
+      - goldeneye
+
+networks:
+  capture:
+    driver: "bridge"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.230.0/24
+        gateway: 172.16.230.1
