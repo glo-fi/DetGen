@@ -1,0 +1,59 @@
+version: '2'
+services:
+  nginx:
+    image: nginx:1.13.8-alpine
+    volumes:
+      - $PWD/conf/default.conf:/etc/nginx.conf:ro
+      - $PWD/conf:/usr/share/nginx/html
+    networks:
+      capture:
+        ipv4_address: 172.16.238.50
+
+  tcpdump_nginx:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-200-nginx-server-ppt-${CAPTURETIME}-$REPNUM.pcap"
+    depends_on:
+      - nginx
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:nginx"
+    depends_on:
+      - dummy
+
+  tcpdump_ptt:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-200-nginx-client-ptt-${CAPTURETIME}-$REPNUM.pcap"
+    depends_on:
+      - nginx
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:patator"
+    depends_on:
+      - dummy
+
+  patator:
+    image: 'detlearsom/patator'
+    volumes:
+      - '$PWD/patator-share:/usr/share/wordlists'
+      - '$PWD/scripts:/usr/share/scripts'
+    command: /usr/share/scripts/inclient0.sh
+    networks:
+      - capture
+    depends_on:
+      - nginx
+    
+  dummy:
+    image: 'alpine'
+    networks:
+      - capture
+    depends_on:
+      - nginx
+
+networks:
+  capture:
+    driver: "bridge"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.238.0/24
+        gateway: 172.16.238.1
