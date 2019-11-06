@@ -1,0 +1,11 @@
+A backdoor that allows an attacker to run arbitrary commands on an nginx server.
+
+This needs to be edited to make it more intuitive to use. Need to come up with a list of basic commands to be executed.
+
+The command script automatically converts spaces, but no other special characters. As such, currently, any commands that use special characters need to be maually encoded. For instance:
+
+- "mkdir attackerDirectory" works fine
+
+- "chmod +x attackerScript.sh" needs to be converted to "chmod %2Bx attackerScript.sh"
+
+Usage: ./capture-ngnix.sh [DURATION] [REPEAT]

@@ -1,0 +1,59 @@
+version: '2'
+services:
+  bd_nginx:
+    image: 'detlearsom/bd_nginx'
+    volumes:
+      - $PWD/conf/default.conf:/etc/nginx.conf:ro
+      - $PWD/conf:/usr/share/nginx/html
+      - $PWD/agent:/agent
+      - $PWD/bd_scripts:/usr/share/scripts
+    command: /usr/share/scripts/startup.sh $DURATION
+    networks:
+      - capture
+
+  ares-cnc:
+    image: 'detlearsom/ares-cnc'
+    ports:
+      - '8999:8080'
+    volumes:
+      - $PWD/ares_scripts:/usr/share/scripts
+    command: /usr/share/scripts/startup.sh $DURATION
+    networks:
+      capture:
+        ipv4_address: 172.16.231.3
+
+  tcpdump_nginx:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-160-backdoor-nginx-server-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:bd_nginx"
+    depends_on:
+      - dummy
+
+  tcpdump_ares:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-110-backdoor-nginx-cnc-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:ares-cnc"
+    depends_on:
+      - dummy
+
+
+  dummy:
+    image: 'ubuntu:18.04'
+    networks:
+      - capture
+    depends_on:
+      - bd_nginx
+
+
+networks:
+  capture:
+    driver: "bridge"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.231.0/24
+        gateway: 172.16.231.1
