@@ -1,0 +1,127 @@
+version: '2'
+
+services:
+  cnc:
+    image: 'detlearsom/cnc'
+    ports:
+     - '8080:23'
+    networks:
+      capture:
+        ipv4_address: 172.16.233.23
+
+  bot1:
+    image: 'detlearsom/bot'
+    networks:
+      - capture
+    depends_on:
+      - cnc
+    
+
+  bot2:
+    image: 'detlearsom/bot'
+    networks:
+      - capture
+    depends_on:
+      - cnc
+
+  bot3:
+    image: 'detlearsom/bot'
+    networks:
+      - capture
+    depends_on:
+      - cnc
+
+  attacker:
+    image: 'detlearsom/telnet'  
+    volumes:
+      - "$PWD/scripts:/usr/share/scripts"
+    command: tail -f /dev/null
+    networks:
+      - capture
+
+  apache:
+    image: 'httpd'
+    volumes:
+      - '$PWD/config:/usr/local/apache2/htdocs'
+    networks:
+      capture:
+        ipv4_address: 172.16.233.33
+
+
+  tcpdump_cnc:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-cnc-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:cnc"
+    depends_on:
+      - dummy
+
+  tcpdump_bot1:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-bot1-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:bot1"
+    depends_on:
+      - dummy
+
+  tcpdump_bot2:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-bot2-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:bot2"
+    depends_on:
+      - dummy
+
+  tcpdump_bot3:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-bot3-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:bot3"
+    depends_on:
+      - dummy
+
+  tcpdump_attacker:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-attacker-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:attacker"
+    depends_on:
+      - dummy
+
+  tcpdump_apache:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-180-apache-botnet-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:apache"
+    depends_on:
+      - dummy
+
+
+  dummy:
+    image: 'alpine'
+    networks:
+      - capture
+    depends_on:
+      - apache
+      - cnc
+      - bot1
+      - bot2
+      - bot3
+      - attacker
+  
+
+networks:
+  capture:
+    driver: "bridge"
+    driver_opts: 
+      com.docker.network.bridge.enable_icc: "true"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.233.0/24
