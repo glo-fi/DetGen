@@ -1,0 +1,54 @@
+version: '2'
+services:
+  nginx:
+    image: 'nginx:1.13.8-alpine'
+    volumes:
+      - $PWD/conf:/etc/nginx/conf.d:ro
+      - $PWD/index:/usr/share/nginx/html
+    networks:
+      capture:
+        ipv4_address: 172.26.0.2
+
+  tcpdump_nginx:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-110-vuln-nginx-server-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:nginx"
+    depends_on:
+      - dummy
+
+  tcpdump_client:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-110-vuln-nginx-client-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '$PWD/data:/data'
+    network_mode: "service:b_forcer"
+    depends_on:
+      - dummy
+
+  b_forcer:
+    image: 'detlearsom/python-requests'
+    volumes:
+      - $PWD/b_forcer_share:/var/lib/
+    command: python /var/lib/brute_force.py
+#    command: sleep 1000
+    networks:
+      - capture
+
+  dummy:
+    image: 'ubuntu:18.04'
+    networks:
+      - capture
+    depends_on:
+      - nginx
+
+
+networks:
+  capture:
+    driver: "bridge"
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.26.0.0/24
+        gateway: 172.26.0.1
