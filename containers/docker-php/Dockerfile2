@@ -1,0 +1,8 @@
+FROM httpd
+
+RUN apt-get update && \
+apt-get install -y php7.0 libapache2-mod-php7.0 php7.0-mcrypt php7.0-mysql && \
+rm -rf /var/lib/apt/lists/*
+
+
+RUN a2enmod php7.0
