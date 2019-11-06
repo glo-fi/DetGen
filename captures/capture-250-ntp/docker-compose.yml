@@ -1,0 +1,71 @@
+version: '2'
+
+services:
+  ntpd_server:
+    image: 'detlearsom/ntpd'
+    volumes:
+      - '$PWD/ntpd_server-share/ntpd.conf:/etc/ntpd.conf'
+    command: /usr/sbin/ntpd -v -d -s
+    ports:
+      - 123:123/udp
+    cap_add:
+      - SYS_RESOURCE
+      - SYS_TIME
+    networks:
+      capture:
+        ipv4_address: 172.16.220.5
+
+  ntpd_client:
+    image: 'detlearsom/ntpd'
+    command: /usr/sbin/ntpd -v -d -s
+    volumes:
+      - '$PWD/ntpd_client-share/ntpd.conf:/etc/ntpd.conf'
+    ports:
+      - 123/udp
+    cap_add:
+      - SYS_RESOURCE
+      - SYS_TIME
+      - SYS_NICE
+    networks:
+      - capture
+
+  tcpdump_ntpd_server:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-250-ntpd-server-${CAPTURETIME}-$REPNUM.pcap"
+    depends_on:
+      - ntpd_server
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:ntpd_server"
+    depends_on:
+      - dummy
+
+  tcpdump_ntpd_client:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-250-ntpd-client-${CAPTURETIME}-$REPNUM.pcap"
+    depends_on:
+      - ntpd_client
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:ntpd_client"
+    depends_on:
+      - dummy
+
+  dummy:
+    image: 'ubuntu'
+    networks:
+      - capture
+    depends_on:
+      - ntpd_server
+      - ntpd_client
+
+networks:
+  capture:
+    driver: 'bridge'
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.16.220.0/24
+        gateway: 172.16.220.1
+
+
