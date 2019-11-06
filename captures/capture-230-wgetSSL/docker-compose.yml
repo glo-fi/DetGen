@@ -1,0 +1,92 @@
+version: '2'
+
+services:
+  wget1:
+    image: detlearsom/wgetssl
+    volumes: 
+      - '$PWD/wget-share:/usr/share/scripts'
+    command: /usr/share/scripts/download_script0.sh
+#    command: sleep 1000
+    networks:
+      - capture
+
+  wget2:
+    image: detlearsom/wgetssl
+    volumes: 
+      - '$PWD/wget-share:/usr/share/scripts'
+    command: /usr/share/scripts/download_script1.sh
+#    command: sleep 1000
+    networks:
+      - capture
+
+
+  wget3:
+    image: detlearsom/wgetssl
+    volumes: 
+      - '$PWD/wget-share:/usr/share/scripts'
+    command: /usr/share/scripts/download_script2.sh
+#    command: sleep 1000
+    networks:
+      - capture
+
+
+
+  wget4:
+    image: detlearsom/wgetssl
+    volumes: 
+      - '$PWD/wget-share:/usr/share/scripts'
+    command: /usr/share/scripts/download_script3.sh
+#    command: sleep 1000
+    networks:
+      - capture
+
+
+  tcpdump_wget1:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-230-wgetSSL1-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:wget1"
+    depends_on:
+      - dummy
+
+  tcpdump_wget2:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-230-wgetSSL2-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:wget2"
+    depends_on:
+      - dummy
+
+  tcpdump_wget3:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-230-wgetSSL3-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:wget3"
+    depends_on:
+      - dummy
+
+  tcpdump_wget4:
+    image: 'detlearsom/tcpdump'
+    command: not(ip6 or arp or (udp and (src port 5353 or src port 57621))) -v -w "/data/dump-230-wgetSSL4-${CAPTURETIME}-$REPNUM.pcap"
+    volumes:
+      - '${DATADIR}:/data'
+    network_mode: "service:wget4"
+    depends_on:
+      - dummy
+
+  dummy:
+    image: 'ubuntu'
+    networks:
+      - capture
+    depends_on:
+      - wget1
+      - wget2
+      - wget3
+      - wget4
+
+networks:
+  capture:
+    driver: "bridge"

@@ -1,0 +1,7 @@
+This capture scenario simply randomly selects a url from a list of the top 10000 most popular websites before downloading the web page using wget over SSL.
+
+The scenarios 0-4 correspond to different user-agents using wget, taken from the list at https://developers.whatismybrowser.com/useragents/explore/. Scenario 5 corresponds to failing to download anything as the site is non-existent. Scenario 6 corresponds to failing to download anything as the certificate file is invalid.
+
+The capture scenario is started via the command: ./capture-wgetSSL.sh [DURATION] [REPEAT] [SCENARIO]. For instance, ./capture-wgetSSL.sh 100 2 4 results in scenario 4 being executing 2 times for 100 seconds.
+
+
